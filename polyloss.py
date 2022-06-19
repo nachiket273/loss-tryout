@@ -64,24 +64,8 @@ class PolyLoss(_Loss):
             poly_loss = ce + self.eps * (1 - pt)
 
         if self.reduction == 'mean':
-            return torch.mean(poly_loss, dim=1)
+            return torch.mean(poly_loss, dim=-1)
         elif self.reduction == 'sum':
-            return torch.sum(poly_loss, dim=1)
+            return torch.sum(poly_loss, dim=-1)
 
         return poly_loss
-
-
-class PolyFocalLoss(_Loss):
-    def __init__(self,
-                 epsilon: float = 1.0,
-                 alpha: float = 0.25,
-                 gamma: float = 2.0,
-                 reduction: str = "none",
-                 weight: Optional[torch.Tensor] = None,
-                 pos_weight: Optional[torch.Tensor] = None,
-                 label_is_onehot: bool = False) -> None:
-        super().__init__()
-
-    def forward(self, input: torch.Tensor,
-                target: torch.Tensor) -> torch.Tensor:
-        pass

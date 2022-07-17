@@ -142,11 +142,9 @@ class PolyFocalLoss(_Loss):
         p_t = p * target + (1 - p) * (1 - target)
         loss = ce_loss * ((1 - p_t) ** self.gamma)
 
-        if self.alpha >= 0:
-            alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
-            loss = alpha_t * loss
-
-        poly_loss = loss + self.eps * torch.pow(1 - p_t, self.gamma + 1)
+        alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
+        poly_loss = loss + self.eps * torch.pow(1 - p_t,
+                                                self.gamma + 1) * alpha_t
 
         if self.reduction == "mean":
             poly_loss = poly_loss.mean()

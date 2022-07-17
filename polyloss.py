@@ -79,7 +79,6 @@ class PolyFocalLoss(_Loss):
                  alpha: float = -1,
                  onehot_encoded: bool = False,
                  reduction: str = "mean",
-                 label_smoothing: float = 0.,
                  weight: Optional[torch.Tensor] = None,
                  pos_weight: Optional[torch.Tensor] = None) -> None:
         """
@@ -94,7 +93,6 @@ class PolyFocalLoss(_Loss):
                           'none': no reduction will be applied,
                           'mean': the weighted mean of the output is taken,
                           'sum': the output will be summed.
-        :param label_smoothing: the amount of smoothening applied to labels.
         :param weight: manual rescaling weight provided to binary cross entropy
                        loss.
         :param pos_weight: weight of positive examples provided to binary
@@ -105,7 +103,6 @@ class PolyFocalLoss(_Loss):
         self.gamma = gamma
         self.alpha = alpha
         self.reduction = reduction
-        self.label_smoothing = label_smoothing
         self.onehot_encoded = onehot_encoded
         self.weight = weight
         self.pos_weight = pos_weight
@@ -149,12 +146,6 @@ class PolyFocalLoss(_Loss):
             alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
             loss = alpha_t * loss
 
-        # if self.label_smoothing > 0.0:
-        #    wt = target * self.label_smoothing\
-        #        + (1 - target) * (1 - self.label_smoothing)
-        #    poly_loss = loss\
-        #        + self.eps * torch.pow(1 - p_t, self.gamma + 1) * wt
-        # else:
         poly_loss = loss + self.eps * torch.pow(1 - p_t, self.gamma + 1)
 
         if self.reduction == "mean":

@@ -37,7 +37,7 @@ pfloss(inputs, targets)
 ```bibtex
 @misc{POLYLOSS,
     title={POLYLOSS: A POLYNOMIAL EXPANSION PERSPECTIVE OF CLASSIFICATION LOSS FUNCTIONS},
-    author={Zhaoqi Leng, Mingxing Tan, Chenxi Liu, Ekin Dogus Cubuk, Xiaojie Shi, Shuyang Cheng,Dragomir Anguelov},
+    author={Zhaoqi Leng, Mingxing Tan, Chenxi Liu, Ekin Dogus Cubuk, Xiaojie Shi, Shuyang Cheng, Dragomir Anguelov},
     year={2022},
     url={https://arxiv.org/pdf/2204.12511.pdf},
 }

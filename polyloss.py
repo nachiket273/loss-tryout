@@ -39,7 +39,7 @@ class PolyLoss(_Loss):
         :param target: ground truth tensor of shape (n, )
         :return: polyloss
         """
-        num_classes = input.shape[-1]
+        num_classes = input.shape[1]
         labels_onehot = F.one_hot(target, num_classes=num_classes)
         labels_onehot = labels_onehot.to(device=input.device,
                                          dtype=input.dtype)
@@ -76,7 +76,7 @@ class PolyLoss(_Loss):
 class PolyFocalLoss(_Loss):
     def __init__(self, epsilon: float = 1.0,
                  gamma: float = 2.0,
-                 alpha: float = -1,
+                 alpha: list[float] = None,
                  onehot_encoded: bool = False,
                  reduction: str = "mean",
                  weight: Optional[torch.Tensor] = None,
@@ -86,8 +86,8 @@ class PolyFocalLoss(_Loss):
         :param epsilon: scaling factor for leading polynomial coefficient
         :param gamma: exponent of the modulating factor (1 - p_t) to balance
                       easy vs hard examples.
-        :param alpha: weighting factor in range (0,1) to balance positive vs
-                      negative examples.
+        :param alpha: weighting factor per class in range (0,1) to balance
+                      positive vs negative examples.
         :param onehot_encoded: True if target is one hot encoded.
         :param reduction: the reduction to apply to the output
                           'none': no reduction will be applied,
@@ -95,8 +95,6 @@ class PolyFocalLoss(_Loss):
                           'sum': the output will be summed.
         :param weight: manual rescaling weight provided to binary cross entropy
                        loss.
-        :param pos_weight: weight of positive examples provided to binary
-                           cross entropy loss.
         """
         super().__init__()
         self.eps = epsilon
@@ -105,7 +103,6 @@ class PolyFocalLoss(_Loss):
         self.reduction = reduction
         self.onehot_encoded = onehot_encoded
         self.weight = weight
-        self.pos_weight = pos_weight
 
     def forward(self, input: torch.Tensor,
                 target: torch.Tensor) -> torch.Tensor:
@@ -116,9 +113,7 @@ class PolyFocalLoss(_Loss):
         :param target: ground truth tensor of shape (n, ) or (n, ...)
         :return: polyfocalloss
         """
-        p = torch.sigmoid(input)
         num_classes = input.shape[1]
-
         if not self.onehot_encoded:
             if target.ndim == 1:
                 target = F.one_hot(target, num_classes=num_classes)
@@ -135,19 +130,18 @@ class PolyFocalLoss(_Loss):
         target = target.to(device=input.device, dtype=input.dtype)
 
         ce_loss =\
-            F.binary_cross_entropy_with_logits(input, target,
-                                               weight=self.weight,
-                                               pos_weight=self.pos_weight,
-                                               reduction="none")
-        p_t = p * target + (1 - p) * (1 - target)
-        loss = ce_loss * ((1 - p_t) ** self.gamma)
+            F.cross_entropy(input, target, weight=self.weight,
+                            reduction="none")
 
-        alpha_t = 0.0
-        if self.alpha > 0.0:
-            alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
-            loss *= alpha_t
+        p_t = torch.exp(-ce_loss)
+        loss = torch.pow((1 - p_t), self.gamma) * ce_loss
 
-        poly_loss = loss + self.eps * torch.pow(1-p_t, self.gamma+1) * alpha_t
+        # alpha_t = 0.0
+        # if self.alpha is not None:
+            # alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
+            # loss *= alpha_t
+
+        poly_loss = loss + self.eps * torch.pow(1-p_t, self.gamma+1) # * alpha_t
 
         if self.reduction == "mean":
             poly_loss = poly_loss.mean()

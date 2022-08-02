@@ -71,8 +71,6 @@ class PolyLoss(_Loss):
         return poly_loss
 
 
-# focal_loss implementation based on implementation:
-# https://github.com/facebookresearch/fvcore/blob/main/fvcore/nn/focal_loss.py
 class PolyFocalLoss(_Loss):
     def __init__(self, epsilon: float = 1.0,
                  gamma: float = 2.0,
@@ -99,7 +97,10 @@ class PolyFocalLoss(_Loss):
         super().__init__()
         self.eps = epsilon
         self.gamma = gamma
-        self.alpha = alpha
+        if not isinstance(alpha, list):
+            raise ValueError("Expected list of floats between 0-1"
+                             "for each class or None.")
+        self.alpha = torch.Tensor(alpha)
         self.reduction = reduction
         self.onehot_encoded = onehot_encoded
         self.weight = weight
@@ -136,12 +137,17 @@ class PolyFocalLoss(_Loss):
         p_t = torch.exp(-ce_loss)
         loss = torch.pow((1 - p_t), self.gamma) * ce_loss
 
-        # alpha_t = 0.0
-        # if self.alpha is not None:
-            # alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
-            # loss *= alpha_t
+        if self.alpha is not None:
+            if len(self.alpha) != num_classes:
+                raise ValueError("Alpha value is not available"
+                                 " for all the classes.")
 
-        poly_loss = loss + self.eps * torch.pow(1-p_t, self.gamma+1) # * alpha_t
+            alpha_t = self.alpha.gather(0, target.data.view(-1))
+            loss *= alpha_t
+            poly_loss = loss + self.eps * torch.pow(1-p_t,
+                                                    self.gamma+1) * alpha_t
+        else:
+            poly_loss = loss + self.eps * torch.pow(1-p_t, self.gamma+1)
 
         if self.reduction == "mean":
             poly_loss = poly_loss.mean()

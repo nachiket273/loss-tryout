@@ -91,19 +91,19 @@ class PolyFocalLoss(_Loss):
                           'none': no reduction will be applied,
                           'mean': the weighted mean of the output is taken,
                           'sum': the output will be summed.
-        :param weight: manual rescaling weight provided to binary cross entropy
-                       loss.
         """
         super().__init__()
         self.eps = epsilon
         self.gamma = gamma
-        if not isinstance(alpha, list):
-            raise ValueError("Expected list of floats between 0-1"
-                             "for each class or None.")
-        self.alpha = torch.Tensor(alpha)
+        if alpha is not None:
+            if not isinstance(alpha, list):
+                raise ValueError("Expected list of floats between 0-1"
+                                 " for each class or None.")
+            self.alpha = torch.Tensor(alpha)
+        else:
+            self.alpha = alpha
         self.reduction = reduction
         self.onehot_encoded = onehot_encoded
-        self.weight = weight
 
     def forward(self, input: torch.Tensor,
                 target: torch.Tensor) -> torch.Tensor:
@@ -117,22 +117,21 @@ class PolyFocalLoss(_Loss):
         num_classes = input.shape[1]
         if not self.onehot_encoded:
             if target.ndim == 1:
-                target = F.one_hot(target, num_classes=num_classes)
+                target1 = F.one_hot(target, num_classes=num_classes)
             else:
                 # target is of size (n, ...)
-                target = target.unsqueeze(1)  # (n, 1, ...)
+                target1 = target.unsqueeze(1)  # (n, 1, ...)
                 # (n, 1, ...) => (n, 1, ... , num_classes)
-                target = F.one_hot(target, num_classes=num_classes)
+                target1 = F.one_hot(target1, num_classes=num_classes)
                 # (n, 1, ..., num_classes) => (n, num_classes, ..., 1)
-                target = target.transpose(1, -1)
+                target1 = target1.transpose(1, -1)
                 # (n, num_classes, ..., 1) => (n, num_classes, ...)
-                target = target.squeeze(-1)
+                target1 = target1.squeeze(-1)
 
-        target = target.to(device=input.device, dtype=input.dtype)
+        target1 = target1.to(device=input.device, dtype=input.dtype)
 
         ce_loss =\
-            F.cross_entropy(input, target, weight=self.weight,
-                            reduction="none")
+            F.cross_entropy(input, target1, reduction="none")
 
         p_t = torch.exp(-ce_loss)
         loss = torch.pow((1 - p_t), self.gamma) * ce_loss
@@ -141,7 +140,9 @@ class PolyFocalLoss(_Loss):
             if len(self.alpha) != num_classes:
                 raise ValueError("Alpha value is not available"
                                  " for all the classes.")
-
+            if torch.count_nonzero(self.alpha) == 0:
+                raise ValueError("All values can't be 0.")
+            self.alpha = self.alpha/sum(self.alpha)
             alpha_t = self.alpha.gather(0, target.data.view(-1))
             loss *= alpha_t
             poly_loss = loss + self.eps * torch.pow(1-p_t,

@@ -1,5 +1,11 @@
 # loss-tryout
 PyTorch implementation of <a href=https://arxiv.org/pdf/2204.12511.pdf>POLYLOSS: A POLYNOMIAL EXPANSION PERSPECTIVE OF CLASSIFICATION LOSS FUNCTIONS</a>
+<br>
+<br>
+polyloss.py contains the implementation of Poly-1 loss and Poly-1 focal loss. <br>
+While polynloss.py contains simple implementations of Poly-N and Poly-N focal loss. Note that this implemenation of Poly-N loss is just for experimenation. <br>
+<br>
+Simple_Example_Polyloss.ipynb is notebook with simple examples of Poly-1 loss usage.
 
 ## Usage
 

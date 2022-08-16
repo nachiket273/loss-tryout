@@ -1,5 +1,10 @@
 import torch
 
+__all__ = [
+    "polynloss",
+    "polynfocal"
+]
+
 
 def crossentropyfirstn(probs, tgts, n=100, reduction='none'):
     losses = list()
